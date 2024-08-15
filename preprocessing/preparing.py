@@ -34,4 +34,4 @@ def preparing_data(df_preprocessed, target_col:str='is_active', ohe_cols='paymen
         features_train_encoded, features_test_encoded, features_train_encoded_scaled, features_test_encoded_scaled, target_train
     )
 
-    return features_train_encoded, features_test_encoded, features_train_encoded_scaled, features_test_encoded_scaled
+    return features_train_encoded, features_test_encoded, features_train_encoded_scaled, features_test_encoded_scaled, target_train, target_test
