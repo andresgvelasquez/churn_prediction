@@ -92,6 +92,38 @@ def contract_preprocessing(df_contract, total_charges='total_charges',
     df_contract.drop([begin_date, end_date, end_date_with_contract], axis=1, inplace=True)
     return df_contract
 
+def personal_preprocessing(df_personal):
+        
+    # Cambiar las columnas gender, partner y dependents por bool. 
+    df_personal = dcolumn_to_bool(df_personal, ['gender', 'partner', 'dependents'])
+    df_personal = df_personal.rename(columns={'gender':'gender_male'}) 
+    return df_personal
+
+def internet_preprocessing(df_internet):
+
+    # Cambiar las columnas al tipo bool
+    df_internet = dcolumn_to_bool(df_internet, ['internet_service', 'online_security', 'online_backup', 'device_protection',
+                                            'tech_support', 'streaming_tv', 'streaming_movies'])
+    df_internet = df_internet.rename(columns={'internet_service':'internet_fiber_optic'})
+
+    return df_internet
+
+def phone_preprocessing(df_phone):
+    # Cambiar la columna multiple_lines a tipo bool. 
+    df_phone = dcolumn_to_bool(df_phone, ['multiple_lines'])
+    return df_phone
+
+def merge_datasets(df_contract, df_internet, df_personal, df_phone, on='customer_id', how='outer'):
+    # Juntar los datasets
+    df_merged = pd.merge(df_contract, df_personal, on=on, how=how)
+    df_merged = pd.merge(df_merged, df_internet, on=on, how=how)
+    df_merged = pd.merge(df_merged, df_phone, on=on, how=how)
+
+    # Rellenar valores ausentes provocados por el merge. Se rellenaran con false.
+    df_merged.fillna(False, inplace=True)
+
+    return df_merged
+
 def read_csv_files(files_path:str, contract_name:str='contract.csv', internet_name:str='internet.csv', personal_name:str='personal.csv', phone_name:str='phone.csv'):
     '''
     Esta función permite leer los 4 archivos CSV en el siguiente orden: contrat, internet, personal y phone.
