@@ -1,6 +1,8 @@
 import pandas as pd
 import re
-import warnings
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
+from boruta import BorutaPy
 
 def bool_user_active(user_info):
     ''' Verifica si la persona sigue activa.
@@ -52,11 +54,11 @@ def dcolumn_to_bool(df, columns):
         df = df.rename(columns={col:clean_name})
     return df 
 
-def contract_preprocessing(df_contract, total_charges='total_charges', 
-                           end_date='end_date', begin_date='begin_date', 
-                           is_active='is_active', paperless_billing='paperless_billing',
-                           end_date_with_contract='end_date_with_contract',
-                           active_days='active_days'):
+def contract_cleaning(df_contract, total_charges='total_charges',
+                      end_date='end_date', begin_date='begin_date',
+                      is_active='is_active', paperless_billing='paperless_billing',
+                      end_date_with_contract='end_date_with_contract',
+                      active_days='active_days'):
     
     # Reemplazar las cadenas vacías de total_charges por 0 y convertir la columna a tipo float
     df_contract[total_charges] = df_contract[total_charges].replace(' ', '0').astype(float)
@@ -92,14 +94,14 @@ def contract_preprocessing(df_contract, total_charges='total_charges',
     df_contract.drop([begin_date, end_date, end_date_with_contract], axis=1, inplace=True)
     return df_contract
 
-def personal_preprocessing(df_personal):
+def personal_cleaning(df_personal):
         
     # Cambiar las columnas gender, partner y dependents por bool. 
     df_personal = dcolumn_to_bool(df_personal, ['gender', 'partner', 'dependents'])
     df_personal = df_personal.rename(columns={'gender':'gender_male'}) 
     return df_personal
 
-def internet_preprocessing(df_internet):
+def internet_cleaning(df_internet):
 
     # Cambiar las columnas al tipo bool
     df_internet = dcolumn_to_bool(df_internet, ['internet_service', 'online_security', 'online_backup', 'device_protection',
@@ -108,7 +110,7 @@ def internet_preprocessing(df_internet):
 
     return df_internet
 
-def phone_preprocessing(df_phone):
+def phone_cleaning(df_phone):
     # Cambiar la columna multiple_lines a tipo bool. 
     df_phone = dcolumn_to_bool(df_phone, ['multiple_lines'])
     return df_phone
@@ -173,3 +175,46 @@ def split_dates(df, date_column, prefix):
     df[f'{prefix}_month'] = df[date_column].dt.month
     df[f'{prefix}_year'] = df[date_column].dt.year
     return df
+
+def split_target_features(df, target_col):
+    # Definir las características y el objetivo
+    features = df.drop(target_col, axis=1)
+    target = df[target_col]
+    return features, target
+
+def MinMaxScaler_dataset(features_train_encoded, features_test_encoded, columns_to_scale):
+    scaler = MinMaxScaler()
+    features_train_encoded_scaled = features_train_encoded.copy()
+    features_test_encoded_scaled = features_test_encoded.copy()
+    features_train_encoded_scaled[columns_to_scale] = scaler.fit_transform(features_train_encoded[columns_to_scale])
+    features_test_encoded_scaled[columns_to_scale] = scaler.transform(features_test_encoded[columns_to_scale])
+    return features_train_encoded_scaled, features_test_encoded_scaled
+
+def LabelEncoder_dataset(features_train, features_test, features_train_encoded, features_test_encoded, lb_cols):
+    label_encoder = LabelEncoder()
+    features_train_encoded[lb_cols] = label_encoder.fit_transform(features_train[lb_cols])
+    features_test_encoded[lb_cols] = label_encoder.transform(features_test[lb_cols])
+    return features_train_encoded, features_test_encoded
+
+def Boruta_alg(features_train_encoded, features_test_encoded, features_train_encoded_scaled, features_test_encoded_scaled, target_train):
+    # Se utilizara un modelo de bosque aletorio como base para el algoritmo Boruta
+
+    # Inicializar el modelo base de bosque aleatorio
+    rf = RandomForestClassifier(random_state=54321)
+
+    # Inicializar Boruta
+    boruta_selector = BorutaPy(estimator=rf, n_estimators='auto', verbose=2)
+
+    # Ajustar Boruta al conjunto de datos
+    boruta_selector.fit(features_train_encoded.values, target_train)
+
+    # Seleccionar las características mas relevantes de boruta
+    boruta_features = features_train_encoded.columns[boruta_selector.support_]
+
+    # Se va a filtrar el dataset con las columnas obtenidas por Boruta
+    features_train_encoded = features_train_encoded[boruta_features]
+    features_test_encoded = features_test_encoded[boruta_features]
+    features_train_encoded_scaled = features_train_encoded_scaled[boruta_features]
+    features_test_encoded_scaled = features_test_encoded_scaled[boruta_features]
+
+    return features_train_encoded, features_test_encoded, features_train_encoded_scaled, features_test_encoded_scaled
