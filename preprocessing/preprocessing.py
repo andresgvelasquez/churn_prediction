@@ -13,6 +13,9 @@ def preprocessing_datasets(df_contract, df_internet, df_personal, df_phone):
     df_phone = phone_preprocessing(df_phone)
 
     # Combinar los dataframes
-    df_telecom_clean = merge_datasets(df_contract, df_internet, df_personal, df_phone)
+    df_merged = merge_datasets(df_contract, df_internet, df_personal, df_phone)
 
-    return df_telecom_clean
+    # Eliminar columnas innecesarias para el modelo
+    df_merged.drop(['begin_year', 'begin_month', 'end_month', 'end_year', 'customer_id'], axis=1, inplace=True)
+
+    return df_merged
