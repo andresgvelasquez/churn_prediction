@@ -1,20 +1,18 @@
 import pandas as pd
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, f1_score, accuracy_score
+from utils.functions import evaluate_model
 
-def dummytest(features_train, target_train, features_test, target_test, show_metrics=False):
-    #Entrenamiento
+def dummytest(features_train, target_train, features_test, target_test, show_metrics=True):
+
+    # Entrenamiento
     model = DummyClassifier()
     model.fit(features_train, target_train)
 
-    # Predicciones
-    predicts = pd.Series(model.predict(features_test))
-
     # Guardar las predicciones
+    predicts = pd.Series(model.predict(features_test))
     predicts.to_csv('./files/datasets/output/dummy_predicts.csv', index=False)
 
     if show_metrics:
-        # Imprime las métricas ROC-AUC, F1 y Accuracy
-        print(f'ROC-AUC: {roc_auc_score(target_test, predicts)}')
-        print(f'F1: {f1_score(target_test, predicts)}')
-        print(f'Accuracy: {accuracy_score(target_test, predicts)}')
+        # Evaluar el modelo para Exactitud, F1, APS, ROC-AUC
+        evaluate_model(model, features_train, target_train, features_test, target_test)
